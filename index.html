@@ -1,0 +1,1064 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ignition Orbit — Techfest, IIT Bombay</title>
+  <meta name="description" content="Ignition Orbit: a cinematic 3D scroll journey through Techfest, IIT Bombay. Navigate the mission checkpoints, meet the Core, the Ring and the Grid, then register for the launch." />
+  <meta name="theme-color" content="#05070D" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #05070D;
+      --panel: #0A0E1A;
+      --accent: #FF7A33;
+      --accent-strong: #FF9459;
+      --steel: #3A4A5C;
+      --steel-bright: #5B7189;
+      --text: #F0EDE6;
+      --text-dim: #A6B0BC;
+      --text-faint: #6C7A87;
+      --line: rgba(240, 237, 230, 0.12);
+      --line-strong: rgba(240, 237, 230, 0.25);
+      --glow: rgba(255, 122, 51, 0.35);
+      --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+      --font-body: "Inter", system-ui, sans-serif;
+      --mono-ish: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    ::selection { background: var(--accent); color: var(--bg); }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 2px;
+    }
+
+    /* ---------------- fixed 3D stage ---------------- */
+    #stage {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: auto; /* interactive object drag lives on the canvas */
+    }
+    #stage canvas { display: block; width: 100%; height: 100%; }
+
+    #stage::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(2, 4, 8, 0.55) 100%),
+        repeating-linear-gradient(to bottom, rgba(240, 237, 230, 0.02) 0 1px, transparent 1px 4px);
+      mix-blend-mode: screen;
+      opacity: 0.9;
+    }
+
+    .flare {
+      position: fixed;
+      z-index: 1;
+      left: 50%;
+      bottom: -18vh;
+      width: 130vw;
+      height: 46vh;
+      transform: translateX(-50%);
+      pointer-events: none;
+      background: radial-gradient(50% 60% at 50% 100%, rgba(255, 122, 51, 0.16), rgba(255, 122, 51, 0.05) 45%, transparent 70%);
+      filter: blur(6px);
+    }
+
+    /* ---------------- overlay structure ---------------- */
+    main { position: relative; z-index: 2; pointer-events: none; }
+
+    .panel {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      position: relative;
+      pointer-events: none;
+    }
+
+    .panel__inner {
+      width: min(1160px, calc(100vw - 4rem));
+      padding: 5.5rem 0;
+      display: grid;
+      gap: 1.4rem;
+      pointer-events: none;
+    }
+
+    .panel--right .panel__inner { justify-items: end; text-align: right; }
+    .panel--right .panel__rule { margin-left: auto; }
+
+    .panel--left .panel__inner { justify-items: start; text-align: left; }
+    .panel--left .panel__rule { margin-right: auto; }
+
+    .panel--center { text-align: center; }
+    .panel--center .panel__inner { justify-items: center; }
+    .panel--center .panel__rule { margin: 0 auto; }
+
+    .kicker {
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: var(--accent);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+    }
+    .kicker::before {
+      content: "";
+      width: 26px; height: 1px;
+      background: var(--accent);
+      flex: none;
+    }
+    .panel--right .kicker { flex-direction: row-reverse; }
+    .panel--center .kicker::before { display: none; }
+    .panel--center .kicker::after {
+      content: "";
+      width: 26px; height: 1px;
+      background: var(--accent);
+    }
+
+    h1, h2 {
+      font-family: var(--font-display);
+      font-weight: 700;
+      line-height: 0.95;
+      margin: 0;
+      text-transform: uppercase;
+      color: var(--text);
+      text-wrap: balance;
+    }
+    h1 { font-size: clamp(3.4rem, 12vw, 9rem); letter-spacing: 0.015em; }
+    h2 { font-size: clamp(2.6rem, 7.5vw, 5.6rem); letter-spacing: 0.02em; }
+
+    .panel p {
+      margin: 0;
+      max-width: 34rem;
+      color: var(--text-dim);
+      font-size: clamp(0.95rem, 1.4vw, 1.06rem);
+      line-height: 1.65;
+    }
+    .panel--center p { margin-inline: auto; }
+
+    .panel__rule {
+      width: 56px; height: 2px;
+      background: var(--accent);
+      box-shadow: 0 0 18px var(--glow);
+    }
+
+    .chip {
+      font-family: var(--mono-ish);
+      font-size: 0.7rem;
+      letter-spacing: 0.3em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+    }
+
+    /* ---------------- hero ---------------- */
+    .hero__title .line { display: block; overflow: hidden; }
+    .hero__title .line > span { display: block; }
+    .hero__sub {
+      margin: 0;
+      font-size: clamp(1rem, 2.2vw, 1.3rem);
+      color: var(--text-dim);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+    .hero__meta {
+      display: flex;
+      gap: 2.2rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-family: var(--mono-ish);
+      font-size: 0.7rem;
+      letter-spacing: 0.22em;
+      color: var(--text-faint);
+      text-transform: uppercase;
+      margin-top: 0.6rem;
+    }
+    .hero__meta b { color: var(--text); font-weight: 600; }
+
+    .scrollcue {
+      position: absolute;
+      left: 50%;
+      bottom: 3rem;
+      transform: translateX(-50%);
+      display: grid;
+      justify-items: center;
+      gap: 0.65rem;
+      font-family: var(--mono-ish);
+      font-size: 0.62rem;
+      letter-spacing: 0.34em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .scrollcue__track {
+      width: 1px; height: 46px;
+      background: var(--line-strong);
+      position: relative;
+      overflow: hidden;
+    }
+    .scrollcue__track::after {
+      content: "";
+      position: absolute;
+      left: 0; top: -40%;
+      width: 100%; height: 40%;
+      background: var(--accent);
+      animation: cue 2.2s ease-in-out infinite;
+    }
+    @keyframes cue {
+      0% { top: -40%; }
+      60%, 100% { top: 110%; }
+    }
+
+    /* ---------------- CTA ---------------- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      text-decoration: none;
+      color: var(--bg);
+      background: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 0.95rem 2.1rem;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+    .btn:hover {
+      background: var(--accent-strong);
+      box-shadow: 0 8px 34px rgba(255, 122, 51, 0.35);
+      transform: translateY(-2px);
+    }
+    .btn:active { transform: translateY(0); }
+    .btn .arrow { transition: transform 160ms ease; }
+    .btn:hover .arrow { transform: translateX(4px); }
+
+    .btn--ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--line-strong);
+    }
+    .btn--ghost:hover {
+      background: rgba(240, 237, 230, 0.06);
+      box-shadow: none;
+      border-color: var(--text);
+    }
+
+    .cta__row { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; pointer-events: auto; }
+    .cta__note {
+      font-family: var(--mono-ish);
+      font-size: 0.66rem;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    /* ---------------- HUD chrome ---------------- */
+    .hud {
+      position: fixed;
+      z-index: 3;
+      left: 0; right: 0;
+      padding: 1.4rem 1.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      pointer-events: none;
+      font-family: var(--mono-ish);
+      font-size: 0.64rem;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+    .hud--top { top: 0; }
+    .hud--bottom { bottom: 0; align-items: flex-end; padding-bottom: 1.5rem; }
+    .hud__brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      color: var(--text);
+      font-weight: 600;
+      letter-spacing: 0.3em;
+    }
+    .hud__brand i {
+      width: 9px; height: 9px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 12px var(--glow);
+      animation: blink 2.6s ease-in-out infinite;
+      flex: none;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    .waypoints {
+      position: fixed;
+      z-index: 3;
+      right: 1.7rem;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      gap: 1rem;
+      pointer-events: none;
+    }
+    .waypoint {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      color: var(--text-faint);
+      font-family: var(--mono-ish);
+      font-size: 0.6rem;
+      letter-spacing: 0.24em;
+    }
+    .waypoint i {
+      width: 7px; height: 7px;
+      border: 1px solid var(--steel-bright);
+      transform: rotate(45deg);
+      transition: background 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
+    }
+    .waypoint.is-active { color: var(--text); }
+    .waypoint.is-active i {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 10px var(--glow);
+    }
+
+    .progress {
+      position: fixed;
+      z-index: 4;
+      top: 0; left: 0;
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-strong));
+      transform-origin: 0 50%;
+      transform: scaleX(0);
+    }
+
+    /* ---------------- loader ---------------- */
+    #loader {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      background: var(--bg);
+      display: grid;
+      place-items: center;
+      transition: opacity 700ms ease, visibility 700ms ease;
+    }
+    #loader.is-done { opacity: 0; visibility: hidden; }
+    .loader__inner { display: grid; justify-items: center; gap: 1.1rem; text-align: center; }
+    .loader__ring {
+      width: 84px; height: 84px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      border-top-color: var(--accent);
+      animation: spin 1.1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader__word {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      letter-spacing: 0.42em;
+      text-transform: uppercase;
+      padding-left: 0.42em;
+    }
+    .loader__pct {
+      font-family: var(--mono-ish);
+      font-size: 0.72rem;
+      letter-spacing: 0.3em;
+      color: var(--accent);
+    }
+
+    /* ---------------- reduced motion / static fallback ---------------- */
+    body.is-static .scrollcue__track::after,
+    body.is-static .hud__brand i { animation: none; }
+    body.is-static .panel { min-height: auto; padding: 18vh 0; }
+    body.is-static main { position: static; }
+    body.is-static .panel__inner { width: min(720px, calc(100vw - 3rem)); }
+    body.is-static .waypoints,
+    body.is-static .progress,
+    body.is-static .scrollcue { display: none; }
+    body.is-static .cta__row { justify-content: flex-start; }
+    body.is-static .panel--center { text-align: left; }
+    body.is-static .panel--center .panel__inner { justify-items: start; }
+    body.is-static .panel--center .kicker::after { display: none; }
+    body.is-static .panel--center .panel__rule { margin: 0; }
+    body.is-static .panel--center p { margin-inline: 0; }
+    body.is-static .hero__meta { justify-content: flex-start; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* ---------------- small screens ---------------- */
+    @media (max-width: 720px) {
+      .panel__inner { width: calc(100vw - 2.4rem); padding: 4.5rem 0; gap: 1.1rem; }
+      .hud { padding: 1.1rem 1.2rem; }
+      .hud__date { display: none; }
+      .waypoints { display: none; }
+      .btn { width: 100%; justify-content: center; }
+      .cta__row { width: 100%; flex-direction: column; }
+      .scrollcue { bottom: 2.2rem; }
+    }
+
+    @media (min-width: 1800px) {
+      .panel__inner { width: 1280px; }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="stage" aria-hidden="true"></div>
+  <div class="flare" aria-hidden="true"></div>
+
+  <div class="progress" id="progress" aria-hidden="true"></div>
+
+  <header class="hud hud--top">
+    <span class="hud__brand"><i></i>IGNITION ORBIT</span>
+    <span><span class="hud__date">TECHFEST · IIT BOMBAY · </span>SEQ 0x1F</span>
+  </header>
+  <footer class="hud hud--bottom">
+    <span>TECHFEST 2026 · IIT BOMBAY, MUMBAI</span>
+    <span>ALT 402 KM · VEL 7.66 KM/S</span>
+  </footer>
+
+  <nav class="waypoints" aria-hidden="true">
+    <span class="waypoint" data-wp="0"><i></i>00 · IGNITION</span>
+    <span class="waypoint" data-wp="1"><i></i>01 · THE CORE</span>
+    <span class="waypoint" data-wp="2"><i></i>02 · THE RING</span>
+    <span class="waypoint" data-wp="3"><i></i>03 · THE GRID</span>
+    <span class="waypoint" data-wp="4"><i></i>04 · LAUNCH</span>
+  </nav>
+
+  <main>
+    <section class="panel panel--center" id="p0" aria-labelledby="h0">
+      <div class="panel__inner">
+        <span class="kicker">Techfest · IIT Bombay</span>
+        <h1 id="h0">
+          <span class="hero__title">
+            <span class="line"><span>Ignition</span></span>
+            <span class="line"><span>Orbit</span></span>
+          </span>
+        </h1>
+        <p class="hero__sub">A three-day expedition into what hasn't shipped yet</p>
+        <div class="hero__meta">
+          <span><b>Mar 14–16</b> · IIT Bombay, Mumbai</span>
+          <span><b>48 hrs</b> · Build window</span>
+          <span><b>₹6L</b> · Prize pool</span>
+          <span><b>Asia's largest</b> · sci-tech festival</span>
+        </div>
+      </div>
+      <div class="scrollcue">
+        <span>Scroll to explore</span>
+        <span class="scrollcue__track"></span>
+      </div>
+    </section>
+
+    <section class="panel panel--right" id="p1" aria-labelledby="h1">
+      <div class="panel__inner">
+        <span class="chip">Checkpoint 01</span>
+        <span class="kicker">The Core</span>
+        <h2 id="h1">One idea.<br>Ignited.</h2>
+        <div class="panel__rule"></div>
+        <p>
+          Every build begins as a bare filament of an idea. At the Core it
+          catches: drag it, spin it, argue with it. The projects people remember
+          are the ones you can't put down — or put away.
+        </p>
+        <span class="chip">Interactive · drag to rotate</span>
+      </div>
+    </section>
+
+    <section class="panel panel--left" id="p2" aria-labelledby="h2">
+      <div class="panel__inner">
+        <span class="chip">Checkpoint 02</span>
+        <span class="kicker">The Ring</span>
+        <h2 id="h2">Orbits, not silos.</h2>
+        <div class="panel__rule"></div>
+        <p>
+          Exhibitions, workshops and competitions share a single gravity well.
+          At Techfest the disciplines don't compete for space — they fly in
+          formation, because the machines that matter are built that way.
+        </p>
+        <span class="chip">Exhibitions · Workshops · Competitions</span>
+      </div>
+    </section>
+
+    <section class="panel panel--right" id="p3" aria-labelledby="h3">
+      <div class="panel__inner">
+        <span class="chip">Checkpoint 03</span>
+        <span class="kicker">The Grid</span>
+        <h2 id="h3">The grid holds.<br>You push.</h2>
+        <div class="panel__rule"></div>
+        <p>
+          Forty-two hours against a structure that doesn't blink. Mentors on comms,
+          parts on the bench, and a scaffold that only rewards builders who keep
+          climbing past the halfway wall.
+        </p>
+        <span class="chip">42H · Live mentor channel</span>
+      </div>
+    </section>
+
+    <section class="panel panel--center" id="p4" aria-labelledby="h4">
+      <div class="panel__inner">
+        <span class="kicker">Final Checkpoint · Launch</span>
+        <h2 id="h4">Crew position:<br>Open.</h2>
+        <p>
+          The countdown is running. Crews of two to four, one launch window at
+          IIT Bombay, March 14–16. When the board goes green, your name goes on
+          the manifest.
+        </p>
+        <div class="cta__row">
+          <a class="btn" href="#" aria-label="Register for Techfest 2026">
+            Register for Techfest <span class="arrow">→</span>
+          </a>
+          <a class="btn btn--ghost" href="#">Explore the events</a>
+        </div>
+        <span class="cta__note">Registration opens Jan 20 · No payload limit</span>
+      </div>
+    </section>
+  </main>
+
+  <div id="loader" role="status" aria-live="polite">
+    <div class="loader__inner">
+      <div class="loader__ring"></div>
+      <div class="loader__word">Ignition Orbit</div>
+      <div class="loader__pct" id="loaderPct">0%</div>
+    </div>
+  </div>
+
+  <!--GSAP-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <!--Three.js r128 (UMD)-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <script>
+  (function () {
+    "use strict";
+
+    var COLORS = { bg: 0x05070d, accent: 0xff7a33, steel: 0x3a4a5c, text: 0xf0ede6 };
+    var IS_MOBILE = window.matchMedia("(max-width: 720px)").matches;
+    var REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var PANEL_IDS = ["p0", "p1", "p2", "p3", "p4"];
+    var WAYPOINTS = Array.prototype.slice.call(document.querySelectorAll(".waypoint"));
+
+    /* ---------------- loader ---------------- */
+    var loader = document.getElementById("loader");
+    var loaderPct = document.getElementById("loaderPct");
+    var loaderVal = 0;
+
+    var sceneReady = false;
+    var loaderTimer = setInterval(function () {
+      loaderVal += loaderVal < 70 ? 5 + Math.random() * 6 : (loaderVal < 92 ? 1.2 : 0.5);
+      if (!sceneReady && loaderVal > 96) loaderVal = 96;
+      if (loaderVal >= 100) {
+        loaderVal = 100;
+        clearInterval(loaderTimer);
+      }
+      loaderPct.textContent = Math.round(loaderVal) + "%";
+      if (loaderVal >= 100) {
+        loader.classList.add("is-done");
+      }
+    }, 90);
+
+    function finishLoader() {
+      sceneReady = true;
+    }
+
+    /* ---------------- CDN guard: degrade to static page ---------------- */
+    function bailToStatic() {
+      clearInterval(loaderTimer);
+      loader.style.display = "none";
+      document.body.classList.add("is-static");
+    }
+    var LIBS_OK = !!(window.THREE && window.gsap && window.ScrollTrigger);
+    if (!LIBS_OK) bailToStatic();
+
+    if (LIBS_OK) {
+    gsap.registerPlugin(ScrollTrigger);
+
+    /* ---------------- renderer / scene / camera ---------------- */
+    var stage = document.getElementById("stage");
+    var renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: "high-performance" });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    if (THREE.sRGBEncoding !== undefined) renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.setClearColor(COLORS.bg, 1);
+    stage.appendChild(renderer.domElement);
+
+    var scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(COLORS.bg, 0.006);
+
+    var camera = new THREE.PerspectiveCamera(58, window.innerWidth / window.innerHeight, 0.1, 240);
+    camera.position.set(0, 10, 68);
+    camera.lookAt(0, 2, 0);
+
+    /* ---------------- lights ---------------- */
+    scene.add(new THREE.AmbientLight(0x46586c, 0.9));
+
+    var keyLight = new THREE.DirectionalLight(0xfff1e0, 1.15);
+    keyLight.position.set(12, 18, 10);
+    scene.add(keyLight);
+
+    var rimLight = new THREE.DirectionalLight(COLORS.accent, 0.5);
+    rimLight.position.set(-14, -6, -12);
+    scene.add(rimLight);
+
+    /* ---------------- materials ---------------- */
+    var matSteel = new THREE.MeshStandardMaterial({ color: COLORS.steel, metalness: 0.85, roughness: 0.32 });
+    var matDark = new THREE.MeshStandardMaterial({ color: 0x141b2b, metalness: 0.7, roughness: 0.45 });
+    var matAccent = new THREE.MeshStandardMaterial({ color: COLORS.accent, metalness: 0.55, roughness: 0.3, emissive: 0xff7a33, emissiveIntensity: 0.25, flatShading: true });
+
+    /* ---------------- layout anchors ---------------- */
+    var CORE_POS = new THREE.Vector3(-18, 2, -8);
+    var RING_POS = new THREE.Vector3(20, 3, -64);
+    var GRID_POS = new THREE.Vector3(-22, 6, -128);
+
+    /* ================= OBJECT 1 · THE CORE ================= */
+    var coreGroup = new THREE.Group();
+    coreGroup.position.copy(CORE_POS);
+
+    var coreGeo = new THREE.IcosahedronGeometry(7, 1);
+    var coreMesh = new THREE.Mesh(coreGeo, matAccent);
+    coreGroup.add(coreMesh);
+
+    var coreShellGeo = new THREE.IcosahedronGeometry(10.5, 1);
+    var coreShell = new THREE.Mesh(coreShellGeo, new THREE.MeshStandardMaterial({
+      color: COLORS.steel, metalness: 0.9, roughness: 0.25,
+      transparent: true, opacity: 0.14, wireframe: true
+    }));
+    coreGroup.add(coreShell);
+
+    var ringGeo = new THREE.TorusGeometry(13.5, 0.35, 12, 90);
+    var coreRing = new THREE.Mesh(ringGeo, matSteel);
+    coreRing.rotation.x = Math.PI / 2.4;
+    coreRing.rotation.y = 0.4;
+    coreGroup.add(coreRing);
+
+    scene.add(coreGroup);
+
+    /* ================= OBJECT 2 · THE RING SYSTEM ================= */
+    var orbitGroup = new THREE.Group();
+    orbitGroup.position.copy(RING_POS);
+
+    var orbitHubGeo = new THREE.OctahedronGeometry(3.6, 0);
+    var orbitHub = new THREE.Mesh(orbitHubGeo, matSteel);
+    orbitGroup.add(orbitHub);
+
+    var orbitRadii = [11, 16, 21];
+    var orbitSpeeds = [0.35, -0.24, 0.16];
+    var orbitTilts = [Math.PI / 2.6, Math.PI / 2.1, Math.PI / 1.9];
+    var orbitPhases = [0.4, 2.2, 4.4];
+    var orbitSatellites = [];
+
+    orbitRadii.forEach(function (r, i) {
+      var ring = new THREE.Mesh(new THREE.TorusGeometry(r, 0.22, 10, 100), matSteel);
+      ring.rotation.x = Math.PI / 2;
+      ring.rotation.z = orbitTilts[i];
+      orbitGroup.add(ring);
+
+      var sat = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), matAccent);
+      var pivot = new THREE.Group();
+      pivot.rotation.x = Math.PI / 2;
+      pivot.rotation.z = orbitTilts[i];
+      sat.position.set(r, 0, 0);
+      pivot.add(sat);
+      pivot.rotation.y = orbitPhases[i];
+      orbitGroup.add(pivot);
+      orbitSatellites.push({ pivot: pivot, speed: orbitSpeeds[i] });
+    });
+
+    var spokesMat = new THREE.LineBasicMaterial({ color: 0x5b7189, transparent: true, opacity: 0.35 });
+    for (var s = 0; s < 3; s++) {
+      var spokeGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(Math.cos(orbitPhases[s]) * orbitRadii[s], 0, Math.sin(orbitPhases[s]) * orbitRadii[s])
+      ]);
+      orbitGroup.add(new THREE.Line(spokeGeo, spokesMat));
+    }
+
+    scene.add(orbitGroup);
+
+    /* ================= OBJECT 3 · THE GRID ================= */
+    var gridGroup = new THREE.Group();
+    gridGroup.position.copy(GRID_POS);
+
+    var gridDim = 26, gridDiv = 12;
+    var gridGeo = new THREE.PlaneGeometry(gridDim, gridDim, gridDiv, gridDiv);
+    var gridFrame = new THREE.Mesh(gridGeo, new THREE.MeshStandardMaterial({
+      color: COLORS.steel, metalness: 0.9, roughness: 0.3, wireframe: true,
+      transparent: true, opacity: 0.5
+    }));
+    gridFrame.rotation.x = Math.PI / 2;
+    gridGroup.add(gridFrame);
+
+    var gridSecond = new THREE.Mesh(new THREE.PlaneGeometry(gridDim * 0.6, gridDim * 0.6, 6, 6), new THREE.MeshStandardMaterial({
+      color: COLORS.accent, metalness: 0.6, roughness: 0.4, wireframe: true,
+      transparent: true, opacity: 0.35
+    }));
+    gridSecond.rotation.x = Math.PI / 2;
+    gridSecond.position.y = 8;
+    gridGroup.add(gridSecond);
+
+    var pillarGeo = new THREE.BoxGeometry(0.8, 8, 0.8);
+    var pillarMat = matDark;
+    [[-9, -9], [9, -9], [-9, 9], [9, 9]].forEach(function (p) {
+      var pillar = new THREE.Mesh(pillarGeo, pillarMat);
+      pillar.position.set(p[0], 4, p[1]);
+      gridGroup.add(pillar);
+    });
+
+    var beaconGeo = new THREE.OctahedronGeometry(1.4, 0);
+    var gridBeacon = new THREE.Mesh(beaconGeo, matAccent);
+    gridBeacon.position.y = 14;
+    gridGroup.add(gridBeacon);
+
+    // hollow cube frame around the grid — the literal wireframe structure
+    var cubeEdges = new THREE.EdgesGeometry(new THREE.BoxGeometry(22, 22, 22));
+    var cubeFrame = new THREE.LineSegments(cubeEdges, new THREE.LineBasicMaterial({
+      color: 0xf0ede6, transparent: true, opacity: 0.4
+    }));
+    cubeFrame.position.y = 11;
+    gridGroup.add(cubeFrame);
+
+    var cubeInner = new THREE.Mesh(new THREE.IcosahedronGeometry(3.2, 0), matAccent);
+    cubeInner.position.y = 11;
+    gridGroup.add(cubeInner);
+
+    var cubeInnerGlow = new THREE.PointLight(COLORS.accent, 0.9, 40, 2);
+    cubeInnerGlow.position.y = 11;
+    gridGroup.add(cubeInnerGlow);
+
+    scene.add(gridGroup);
+
+    /* ================= OBJECT 4 · MONOLITH (final vista anchor) ================= */
+    var monolith = new THREE.Mesh(
+      new THREE.BoxGeometry(10, 26, 4),
+      new THREE.MeshStandardMaterial({ color: 0x1a2233, metalness: 0.85, roughness: 0.28 })
+    );
+    monolith.position.set(32, 10, -156);
+    scene.add(monolith);
+
+    var monolithEdge = new THREE.Mesh(
+      new THREE.BoxGeometry(10.4, 26.4, 4.4),
+      new THREE.MeshStandardMaterial({ color: COLORS.accent, wireframe: true, transparent: true, opacity: 0.18 })
+    );
+    monolithEdge.position.copy(monolith.position);
+    scene.add(monolithEdge);
+
+    /* ================= ambient particle field ================= */
+    var PARTICLE_COUNT = IS_MOBILE ? 700 : 1600;
+    var pGeo = new THREE.BufferGeometry();
+    var pPositions = new Float32Array(PARTICLE_COUNT * 3);
+    var pSizes = new Float32Array(PARTICLE_COUNT);
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      pPositions[i * 3 + 0] = (Math.random() - 0.5) * 240;
+      pPositions[i * 3 + 1] = (Math.random() - 0.5) * 140;
+      pPositions[i * 3 + 2] = 40 - Math.random() * 300;
+      pSizes[i] = 0.6 + Math.random() * 1.6;
+    }
+    pGeo.setAttribute("position", new THREE.BufferAttribute(pPositions, 3));
+    pGeo.setAttribute("aSize", new THREE.BufferAttribute(pSizes, 1));
+
+    var pMat = new THREE.ShaderMaterial({
+      uniforms: { uTime: { value: 0 }, uColor: { value: new THREE.Color(0xf0ede6) } },
+      vertexShader: [
+        "attribute float aSize;",
+        "uniform float uTime;",
+        "varying float vTwinkle;",
+        "void main() {",
+        "  vTwinkle = 0.6 + 0.4 * sin(uTime * 1.4 + position.x * 0.8 + position.y * 0.5);",
+        "  vec4 mv = modelViewMatrix * vec4(position, 1.0);",
+        "  gl_PointSize = aSize * (140.0 / -mv.z);",
+        "  gl_Position = projectionMatrix * mv;",
+        "}"
+      ].join("\n"),
+      fragmentShader: [
+        "uniform vec3 uColor;",
+        "varying float vTwinkle;",
+        "void main() {",
+        "  vec2 c = gl_PointCoord - 0.5;",
+        "  float d = length(c);",
+        "  if (d > 0.5) discard;",
+        "  float alpha = smoothstep(0.5, 0.05, d) * vTwinkle * 0.85;",
+        "  gl_FragColor = vec4(uColor, alpha);",
+        "}"
+      ].join("\n"),
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending
+    });
+    var particles = new THREE.Points(pGeo, pMat);
+    scene.add(particles);
+
+    /* ================= floor grid line ================= */
+    var floorGrid = new THREE.GridHelper(300, 60, 0x2a3546, 0x1a2330);
+    floorGrid.position.y = -14;
+    floorGrid.material.transparent = true;
+    floorGrid.material.opacity = 0.28;
+    scene.add(floorGrid);
+
+    /* ================= camera path (scroll-fraction keyframes) ================= */
+    // Keyframes are pinned to scroll progress so each checkpoint framing lands
+    // exactly when its panel is centered on screen. Smoothstep between keys
+    // makes the camera settle briefly at every checkpoint before moving on.
+    var CAM_KEYS = [
+      { t: 0.00, pos: [  0, 10,  68], look: [   0,  2,    0] },  // hero: wide establishing shot
+      { t: 0.10, pos: [ -8,  8,  44], look: [ -12,  2,   -6] },
+      { t: 0.20, pos: [ -6,  4,  16], look: [ -24,  2,   -8] },  // checkpoint 1 · the core (structure left, text right)
+      { t: 0.30, pos: [  2,  6, -18], look: [  12,  3,  -48] },
+      { t: 0.40, pos: [  4,  7, -34], look: [  14,  3,  -64] },  // checkpoint 2 · the ring (structure right, text left)
+      { t: 0.50, pos: [ -2,  7, -78], look: [ -14,  6, -112] },
+      { t: 0.60, pos: [ -8,  9,-100], look: [ -15,  6, -128] },  // checkpoint 3 · the grid (structure left, text right)
+      { t: 0.75, pos: [ -2, 14,-114], look: [ -10,  8, -122] },
+      { t: 0.88, pos: [  0, 30,   8], look: [   0,  4,  -84] },
+      { t: 1.00, pos: [  0, 34,  40], look: [   0,  0,  -70] }   // final · composed vista
+    ];
+
+    function samplePath(p, outPos, outLook) {
+      var i = 0;
+      while (i < CAM_KEYS.length - 2 && p > CAM_KEYS[i + 1].t) i++;
+      var a = CAM_KEYS[i], b = CAM_KEYS[i + 1];
+      var span = (b.t - a.t) || 1;
+      var u = Math.min(Math.max((p - a.t) / span, 0), 1);
+      u = u * u * (3 - 2 * u); // ease in/out of every checkpoint
+      outPos.set(
+        a.pos[0] + (b.pos[0] - a.pos[0]) * u,
+        a.pos[1] + (b.pos[1] - a.pos[1]) * u,
+        a.pos[2] + (b.pos[2] - a.pos[2]) * u
+      );
+      outLook.set(
+        a.look[0] + (b.look[0] - a.look[0]) * u,
+        a.look[1] + (b.look[1] - a.look[1]) * u,
+        a.look[2] + (b.look[2] - a.look[2]) * u
+      );
+    }
+
+    var camTarget = new THREE.Vector3();
+    var lookTarget = new THREE.Vector3();
+
+    // mobile: drop intermediate travel keys for a snappier path + wider lens
+    if (IS_MOBILE) {
+      CAM_KEYS = CAM_KEYS.filter(function (k) {
+        return k.t === 0 || k.t === 0.2 || k.t === 0.4 || k.t === 0.6 || k.t === 0.88 || k.t === 1;
+      });
+      camera.fov = 68;
+      camera.updateProjectionMatrix();
+    }
+
+    /* ---------------- pointer interaction (core object) ---------------- */
+    var pointer = { x: 0, y: 0, sx: 0, sy: 0 };
+    var dragging = false;
+    var dragStart = { x: 0, y: 0 };
+    var dragVel = { x: 0, y: 0 };
+    var userRot = { x: 0, y: 0 };
+
+    window.addEventListener("pointermove", function (e) {
+      pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+      pointer.y = (e.clientY / window.innerHeight) * 2 - 1;
+      if (dragging) {
+        dragVel.x = (e.clientX - dragStart.x) * 0.006;
+        dragVel.y = (e.clientY - dragStart.y) * 0.006;
+        dragStart.x = e.clientX;
+        dragStart.y = e.clientY;
+      }
+    }, { passive: true });
+
+    renderer.domElement.addEventListener("pointerdown", function (e) {
+      if (e.pointerType !== "mouse") return; // keep touch free for page scrolling
+      dragging = true;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
+    });
+    window.addEventListener("pointerup", function () { dragging = false; });
+
+    /* ---------------- render loop ---------------- */
+    var clock = new THREE.Clock();
+    var scrollProgress = 0;
+    var smoothProgress = 0;
+    var frameCount = 0;
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      var t = clock.getElapsedTime();
+      frameCount++;
+
+      // smooth scroll progress
+      smoothProgress = lerp(smoothProgress, scrollProgress, 0.06);
+
+      // camera along scroll-fraction path
+      var pc = Math.min(Math.max(smoothProgress, 0), 1);
+      samplePath(pc, camTarget, lookTarget);
+
+      // subtle parallax from pointer
+      var px = lerp(pointer.sx, pointer.x, 0.05);
+      var py = lerp(pointer.sy, pointer.y, 0.05);
+      pointer.sx = px; pointer.sy = py;
+
+      camera.position.set(
+        camTarget.x + px * 1.5,
+        camTarget.y + py * 0.8,
+        camTarget.z
+      );
+      camera.lookAt(lookTarget.x + px * 2, lookTarget.y + py * 1.2, lookTarget.z);
+
+      // core idle rotation + user drag
+      coreMesh.rotation.y += 0.004;
+      coreMesh.rotation.x += 0.001;
+      coreShell.rotation.y -= 0.002;
+      coreShell.rotation.x += 0.001;
+      coreRing.rotation.z += 0.003;
+
+      // drag inertia
+      userRot.y += dragVel.x;
+      userRot.x += dragVel.y;
+      dragVel.x *= 0.94;
+      dragVel.y *= 0.94;
+      // gentle parallax tilt toward the pointer when idle
+      if (!dragging) {
+        userRot.x = lerp(userRot.x, pointer.y * 0.12, 0.02);
+        userRot.y = lerp(userRot.y, pointer.x * 0.18, 0.02);
+      }
+      coreGroup.rotation.x = lerp(coreGroup.rotation.x, userRot.x, 0.12);
+      coreGroup.rotation.y = lerp(coreGroup.rotation.y, userRot.y, 0.12);
+
+      // orbit system motion
+      for (var i = 0; i < orbitSatellites.length; i++) {
+        orbitSatellites[i].pivot.rotation.y += orbitSatellites[i].speed * 0.01;
+      }
+      orbitHub.rotation.y += 0.006;
+      orbitHub.rotation.x = Math.sin(t * 0.4) * 0.12;
+
+      // grid motion
+      gridSecond.rotation.z += 0.002;
+      gridBeacon.rotation.y += 0.02;
+      gridBeacon.position.y = 12 + Math.sin(t * 1.2) * 0.8;
+
+      // monolith subtle float
+      monolith.position.y = 8 + Math.sin(t * 0.5) * 0.6;
+      monolithEdge.position.y = monolith.position.y;
+      monolithEdge.rotation.y = Math.sin(t * 0.3) * 0.05;
+
+      // particles
+      pMat.uniforms.uTime.value = t;
+      particles.rotation.y = t * 0.008;
+
+      renderer.render(scene, camera);
+    }
+
+    /* ---------------- scroll wiring (GSAP ScrollTrigger) ---------------- */
+    var progressEl = document.getElementById("progress");
+
+    if (!REDUCED) {
+      ScrollTrigger.create({
+        trigger: "main",
+        start: "top top",
+        end: "bottom bottom",
+        onUpdate: function (self) {
+          scrollProgress = self.progress;
+          progressEl.style.transform = "scaleX(" + self.progress + ")";
+        }
+      });
+
+      // active waypoint highlighting via per-panel triggers
+      PANEL_IDS.forEach(function (id, idx) {
+        ScrollTrigger.create({
+          trigger: "#" + id,
+          start: "top 55%",
+          end: "bottom 45%",
+          onToggle: function (self) {
+            if (self.isActive) setActiveWaypoint(idx);
+          }
+        });
+      });
+    }
+
+    function setActiveWaypoint(idx) {
+      WAYPOINTS.forEach(function (w, i) {
+        w.classList.toggle("is-active", i === idx);
+      });
+    }
+    setActiveWaypoint(0);
+
+    /* ---------------- resize ---------------- */
+    var resizeTimer;
+    window.addEventListener("resize", function () {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(function () {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        ScrollTrigger.refresh();
+      }, 150);
+    });
+
+    /* ---------------- dispose on unload ---------------- */
+    window.addEventListener("pagehide", function () {
+      renderer.dispose();
+      pGeo.dispose();
+      pMat.dispose();
+      coreGeo.dispose();
+      coreShellGeo.dispose();
+      ringGeo.dispose();
+      orbitHubGeo.dispose();
+      gridGeo.dispose();
+      pillarGeo.dispose();
+      beaconGeo.dispose();
+      spokesMat.dispose();
+      cubeEdges.dispose();
+      scene.traverse(function (obj) {
+        if (obj.geometry) obj.geometry.dispose();
+      });
+    });
+
+    /* ---------------- reduced motion: static assembled view ---------------- */
+    if (REDUCED) {
+      document.body.classList.add("is-static");
+      camera.position.set(0, 34, 40);
+      camera.lookAt(0, 0, -70);
+      // freeze scroll-driven camera; keep a single gentle render loop for shader time only
+      var staticT = 0;
+      (function staticLoop() {
+        requestAnimationFrame(staticLoop);
+        staticT += 0.016;
+        pMat.uniforms.uTime.value = staticT;
+        renderer.render(scene, camera);
+      })();
+    } else {
+      animate();
+    }
+
+    finishLoader();
+    } // end THREE/gsap guard
+  })();
+  </script>
+</body>
+</html>
